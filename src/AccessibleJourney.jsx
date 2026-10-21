@@ -16,7 +16,7 @@ const NODES = {
   rearUpper: { label: 'Walkway behind the Lab Block', p: [1240, 230], area: 'outdoor' },
   labRampApproach: { label: 'Walkway approaching the Lab Block ramp', p: [1100, 208], area: 'outdoor' },
   labRamp: { label: 'Lab Block right-side ramp', p: [1007, 208], area: 'ramp' },
-  labFront: { label: 'Lab Block main entrance (stairs)', p: [790, 278], area: 'stairs' },
+  labFront: { label: 'Lab Block main entrance (stairs)', p: [758, 266], area: 'stairs' },
   fountain: { label: 'Fountain courtyard', p: [720, 800], area: 'outdoor' },
   courtyard: { label: 'Central paved courtyard', p: [720, 660], area: 'outdoor' },
   connector: { label: 'Covered connector', p: [720, 565], area: 'outdoor' },

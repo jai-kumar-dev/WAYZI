@@ -386,3 +386,6 @@
     width:min(260px,calc(100% - 16px));
   }
 }
+
+/* Illustrative BVS Block demo ramp on the left facade; distinct from the front stair entrance. */
+.campus-ramp-marker-bvs{left:21.8%;top:57.5%;}
