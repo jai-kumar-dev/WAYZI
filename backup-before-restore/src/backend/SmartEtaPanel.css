@@ -1,0 +1,23 @@
+.smart-eta-card{margin:18px 0 4px;padding:15px;border:1px solid #dce6f4;border-radius:14px;background:linear-gradient(145deg,#f8fbff,#fff);box-shadow:0 5px 18px #192e4c08;color:#26364c}
+.smart-eta-heading{display:flex;align-items:center;gap:10px;margin-bottom:13px}
+.smart-eta-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#eaf1ff;color:#2764ef}
+.smart-eta-heading strong,.smart-eta-heading small{display:block}
+.smart-eta-heading strong{font:700 13px Manrope,sans-serif}
+.smart-eta-heading small{font-size:10px;color:#8793a5;margin-top:3px}
+.smart-eta-controls{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.smart-eta-controls label>span{display:flex;align-items:center;gap:5px;margin-bottom:5px;font-size:10px;color:#77869a}
+.smart-eta-controls select{width:100%;padding:8px;border:1px solid #e2e8f0;border-radius:8px;background:white;color:#314158;font-size:11px}
+.smart-eta-result{display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px;border-radius:10px;background:#edf4ff}
+.smart-eta-clock{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:#fff;color:#2764ef}
+.smart-eta-result small,.smart-eta-result strong{display:block}
+.smart-eta-result small{font-size:10px;color:#687991}
+.smart-eta-result strong{font:800 22px Manrope,sans-serif;color:#1c4fae;margin-top:2px}
+.smart-eta-source{font-size:9px;color:#63748b;margin:8px 0 0}
+.smart-eta-disclaimer{font-size:9px;line-height:1.5;color:#8b6a36;background:#fff8e9;border:1px solid #f4e2b8;border-radius:8px;padding:8px;margin:9px 0}
+.smart-eta-feedback{border-top:1px solid #e9eef5;padding-top:10px}
+.smart-eta-feedback>label{display:block;font-size:10px;color:#687991;margin-bottom:6px}
+.smart-eta-feedback>div{display:flex;gap:6px}
+.smart-eta-feedback input{width:0;min-width:0;flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:11px}
+.smart-eta-feedback button{display:flex;align-items:center;gap:5px;border:0;border-radius:8px;background:#2764ef;color:#fff;padding:0 10px;font-size:10px;font-weight:700}
+.smart-eta-feedback>small{display:block;font-size:9px;line-height:1.4;color:#54708b;margin-top:6px}
+.smart-eta-offline{font-size:9px;line-height:1.45;color:#8b6a36;margin:8px 0 0}
