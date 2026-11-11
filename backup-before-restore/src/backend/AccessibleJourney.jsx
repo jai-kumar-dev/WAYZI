@@ -1,0 +1,75 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Accessibility, ArrowDown, ArrowLeft, ArrowRight, ArrowUp, Check, ChevronRight, CirclePause, CirclePlay, Flag, LocateFixed, MapPin, Navigation, RotateCcw, Route, Volume2, X } from 'lucide-react';
+
+const STARTS = ['Main Gate','Fountain','BVS Block entrance','Academic Block · Second Gate','Lab Block entrance','Lab Block · Lift lobby'];
+const DESTS = ['BVS Block · BVK12','BVS Block · BVK13','BVS Block · Chemistry Lab','Academic Block · Room 104','Academic Block · Room 202','Lab Block · Reading Room','Canteen 1','Canteen 2'];
+const ROUTE_POINTS = {
+  'Main Gate': [ [95,300],[95,252],[170,252],[170,190] ],
+  'Fountain': [ [245,270],[245,230],[170,230],[170,190] ],
+  'BVS Block entrance': [ [170,190],[170,230],[245,230] ],
+  'Academic Block · Second Gate': [ [410,190],[410,230],[480,230] ],
+  'Lab Block entrance': [ [300,80],[300,120],[300,150] ],
+  'Lab Block · Lift lobby': [ [300,150],[300,120],[300,80] ],
+  'BVS Block · BVK12': [ [170,190],[170,230],[245,230],[245,265] ],
+  'BVS Block · BVK13': [ [170,190],[170,230],[245,230],[245,290] ],
+  'BVS Block · Chemistry Lab': [ [170,190],[170,230],[245,230],[245,315] ],
+  'Academic Block · Room 104': [ [410,190],[410,230],[480,230],[480,270] ],
+  'Academic Block · Room 202': [ [410,190],[410,230],[480,230],[480,270] ],
+  'Lab Block · Reading Room': [ [300,150],[300,120],[355,120],[355,80] ],
+  'Canteen 1': [ [95,300],[95,252],[170,252],[170,330] ],
+  'Canteen 2': [ [95,300],[95,252],[170,252],[170,330],[225,350] ]
+};
+function readLiftStatus(){
+  try {
+    const blocked=JSON.parse(window.localStorage.getItem('campusaccess-v34-blocked-links')||'[]');
+    const lift1Out=blocked.some(id=>/room:\d+:lift 1/.test(id));
+    const lift2Out=blocked.some(id=>/room:\d+:lift 2/.test(id));
+    return {lift1Out,lift2Out};
+  } catch { return {lift1Out:false,lift2Out:false}; }
+}
+function makeSteps(from,to,liftStatus){
+  const target=to.toLowerCase();
+  let mid;
+  if(target.includes('academic')) mid=['Walk straight from the Main Gate toward the fountain','Turn right at the fountain path','Continue along the central walkway','Turn left at the Academic Block approach','Enter through the second gate ramp','Continue to the destination floor / room'];
+  else if(target.includes('lab block')) {
+    const vertical=liftStatus.lift1Out && liftStatus.lift2Out
+      ? ['The entrance has stairs','Enter only if stairs are usable for you','Use the staircase to the second floor','Turn right at the corridor junction']
+      : liftStatus.lift1Out
+        ? ['The entrance has stairs','Enter the building','Turn right toward Lift 2','Take Lift 2 to the second floor','Turn right at the corridor junction']
+        : ['The entrance has stairs','Enter the building','Turn right toward Lift 1','Take Lift 1 to the second floor','Turn right at the corridor junction'];
+    mid=['Walk straight from the Main Gate toward the fountain','Continue past the fountain courtyard','Turn left onto the rear campus path','Continue to the Lab Block entrance',...vertical,'Arrive at the Reading Room'];
+  }
+  else if(target.includes('canteen 2')) mid=['Walk straight from the Main Gate','Turn right after the fountain courtyard','Continue past Canteen 1','Turn left at the next path','Arrive at Canteen 2'];
+  else if(target.includes('canteen 1')) mid=['Walk straight from the Main Gate','Turn right toward the BVS side path','Continue along the covered walkway','Arrive at Canteen 1'];
+  else mid=['Walk straight from the Main Gate toward the fountain','Turn left around the fountain courtyard','Continue toward the BVS Block','Turn right at the BVS entrance','Follow the corridor to your destination','Arrive at '+to];
+  if(from==='Fountain') mid=mid.slice(1);
+  else if(from.startsWith('BVS')) mid=mid.slice(2);
+  else if(from.startsWith('Academic')) mid=mid.slice(3);
+  else if(from.startsWith('Lab Block · Lift')) mid=mid.slice(-4);
+  else if(from.startsWith('Lab Block entrance')) mid=mid.slice(-5);
+  return [{title:'Start navigation',detail:`Starting from ${from}`,turn:'start'},...mid.map((title,i)=>({title,detail:i===mid.length-1?`Your destination is ${to}`:'Follow the highlighted path on the campus map',turn:/right/i.test(title)?'right':/left/i.test(title)?'left':/lift/i.test(title)?'lift':'straight'})),{title:'You have arrived',detail:`You reached ${to}`,turn:'arrive'}];
+}
+function ArrowFor({turn}){if(turn==='left')return <ArrowLeft/>;if(turn==='right')return <ArrowRight/>;if(turn==='lift')return <ArrowUp/>;if(turn==='arrive')return <Flag/>;return <ArrowUp/>}
+export default function AccessibleJourney(){
+ const [from,setFrom]=useState('Main Gate'); const [to,setTo]=useState('BVS Block · BVK12'); const [started,setStarted]=useState(false); const [step,setStep]=useState(0); const [auto,setAuto]=useState(false); const [voice,setVoice]=useState(false); const [liftStatus,setLiftStatus]=useState(()=>readLiftStatus());
+ const steps=useMemo(()=>makeSteps(from,to,liftStatus),[from,to,liftStatus]); const points=useMemo(()=>{const a=ROUTE_POINTS[from]||ROUTE_POINTS['Main Gate'];const b=ROUTE_POINTS[to]||ROUTE_POINTS['BVS Block · BVK12'];return [...a,...b.slice(1)];},[from,to]);
+ const progress=started?Math.min(100,Math.round(step/(steps.length-1)*100)):0;
+ useEffect(()=>{if(!auto||!started)return;const timer=setInterval(()=>setStep(s=>{if(s>=steps.length-1){setAuto(false);return s}return s+1}),3500);return()=>clearInterval(timer)},[auto,started,steps.length]);
+ useEffect(()=>{if(voice&&started&&steps[step]){if('speechSynthesis'in window){window.speechSynthesis.cancel();window.speechSynthesis.speak(new SpeechSynthesisUtterance(steps[step].title));}}},[step,voice,started,steps]);
+ const changeRoute=(setter,value)=>{setter(value);setStarted(false);setAuto(false);setStep(0)};
+ const marker=points[Math.min(points.length-1,Math.floor((step/Math.max(1,steps.length-1))*(points.length-1)))];
+ const blocked=to.includes('Room 202')||to.includes('Lab Block');
+ const liftNotice=liftStatus.lift1Out&&liftStatus.lift2Out?'Both demo lifts are reported out of service. The fallback uses stairs and is NOT step-free.':liftStatus.lift1Out?'Lift 1 is reported out of service. The demo route switches to Lift 2.':liftStatus.lift2Out?'Lift 2 is reported out of service. The demo route uses Lift 1.':'';
+ return <main className="journey-shell">
+  <header className="journey-heading"><div><div className="journey-eyebrow"><span className="live-dot"/> GTBIT CAMPUS · DEMO MODE</div><h1>Where do you want to go?</h1><p>Indoor and outdoor turn-by-turn guidance on a simulated campus map.</p></div><div className="journey-mode"><Accessibility size={20}/><span><b>Accessible mode</b><small>Step-free route preference</small></span><span className="mode-switch">ON</span></div></header>
+  <section className="journey-planner"><label><span>FROM</span><div className="journey-select-wrap"><span className="journey-origin-dot"/><select value={from} onChange={e=>changeRoute(setFrom,e.target.value)}>{STARTS.map(x=><option key={x}>{x}</option>)}</select></div></label><button className="journey-swap" title="Switch to a return journey" onClick={()=>{const nextFrom=to.includes('Academic')?'Academic Block · Second Gate':to.includes('Lab Block')?'Lab Block · Lift lobby':to.includes('Canteen')?'Fountain':'BVS Block entrance';const nextTo=from.includes('Academic')?'Academic Block · Room 104':from.includes('Lab Block')?'Lab Block · Reading Room':from.includes('BVS')?'BVS Block · BVK12':'Canteen 1';changeRoute(setFrom,nextFrom);changeRoute(setTo,nextTo)}}><ArrowDown size={17}/></button><label><span>TO</span><div className="journey-select-wrap"><MapPin size={17}/><select value={to} onChange={e=>changeRoute(setTo,e.target.value)}>{DESTS.map(x=><option key={x}>{x}</option>)}</select></div></label><button className="journey-go" onClick={()=>{setLiftStatus(readLiftStatus());setStarted(false);setStep(0);setAuto(false);setStarted(true)}}><Route size={17}/> Preview route</button></section>
+  {(blocked||liftNotice)&&<div className="journey-warning"><X size={18}/><span><b>Demo accessibility notice:</b> {liftNotice||'The Lab Block entrance has stairs before the interior lift. This entrance barrier must be considered separately from lift availability.'} Route geometry is hypothetical demo data, not a verified accessible path.</span></div>}
+  <div className="journey-content"><section className="journey-map-card"><div className="journey-map-top"><div><span className="journey-label">LIVE ROUTE PREVIEW</span><h2>{started?(step===steps.length-1?'You have arrived':steps[step]?.title):`${from} → ${to}`}</h2></div><span className="demo-map-pill"><span/> SIMULATED</span></div>
+   <div className="journey-map"><svg viewBox="0 0 560 400" role="img" aria-label="Illustrative campus map with simulated route"><defs><pattern id="grass" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="4" cy="5" r="1" fill="#d5e7d8"/></pattern><filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity=".12"/></filter></defs><rect width="560" height="400" rx="18" fill="#f2f6f2"/><rect width="560" height="400" fill="url(#grass)"/><path d="M40 330 H520 M280 360 V35 M50 205 H510" stroke="#d8dedb" strokeWidth="30" strokeLinecap="round"/><path d="M40 330 H520 M280 360 V35 M50 205 H510" stroke="#fff" strokeWidth="22" strokeLinecap="round"/><path d="M280 205 V150" stroke="#cbd5d1" strokeWidth="22"/><rect x="205" y="25" width="150" height="100" rx="9" fill="#e6e9f0" stroke="#a9b4c4"/><text x="280" y="67" textAnchor="middle" fontSize="13" fontWeight="800" fill="#35445a">LAB BLOCK</text><text x="280" y="86" textAnchor="middle" fontSize="10" fill="#526176">Lift inside · entrance stairs</text><rect x="70" y="220" width="145" height="105" rx="9" fill="#d9edf4" stroke="#78aebf" filter="url(#shadow)"/><text x="142" y="263" textAnchor="middle" fontSize="13" fontWeight="800" fill="#225b70">BVS BLOCK</text><text x="142" y="281" textAnchor="middle" fontSize="10" fill="#386c7b">Ramp + lift reported</text><rect x="350" y="220" width="145" height="105" rx="9" fill="#e9e3d7" stroke="#b6a78d" filter="url(#shadow)"/><text x="422" y="263" textAnchor="middle" fontSize="13" fontWeight="800" fill="#665338">ACADEMIC</text><text x="422" y="281" textAnchor="middle" fontSize="10" fill="#806c4c">Second gate ramp reported</text><circle cx="280" cy="205" r="29" fill="#d8f0e6" stroke="#9dcfbb" strokeWidth="2"/><circle cx="280" cy="205" r="17" fill="#85cdb3"/><text x="280" y="244" textAnchor="middle" fontSize="10" fill="#477866">FOUNTAIN</text><rect x="25" y="342" width="90" height="36" rx="8" fill="#fff0d8" stroke="#e6c48d"/><text x="70" y="364" textAnchor="middle" fontSize="10" fontWeight="800" fill="#80591f">CANTEEN 1</text><rect x="125" y="342" width="90" height="36" rx="8" fill="#fff0d8" stroke="#e6c48d"/><text x="170" y="364" textAnchor="middle" fontSize="10" fontWeight="800" fill="#80591f">CANTEEN 2</text><path d={points.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')} fill="none" stroke="#fff" strokeWidth="13" strokeLinecap="round" strokeLinejoin="round"/><path d={points.map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ')} fill="none" stroke="#2879ee" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={started?'none':'9 8'} opacity=".95"/><circle cx={points[0][0]} cy={points[0][1]} r="9" fill="#fff" stroke="#2879ee" strokeWidth="4"/><circle cx={points[points.length-1][0]} cy={points[points.length-1][1]} r="9" fill="#2879ee" stroke="#fff" strokeWidth="3"/>{started&&marker&&<g transform={`translate(${marker[0]} ${marker[1]})`}><circle r="20" fill="#2879ee" opacity=".18"/><circle r="10" fill="#2879ee" stroke="#fff" strokeWidth="3"/><path d="M0 -6 L5 4 L0 1 L-5 4Z" fill="#fff"/><animate attributeName="opacity" values=".75;1;.75" dur="1.4s" repeatCount="indefinite"/></g>}<g transform="translate(24 24)"><rect width="112" height="28" rx="14" fill="#fff" stroke="#dbe3e8"/><circle cx="14" cy="14" r="4" fill="#2879ee"/><text x="25" y="18" fontSize="10" fontWeight="700" fill="#46556b">YOU ARE HERE</text></g></svg><div className="journey-map-footer"><span><i className="legend-route"/> Simulated route</span><span><i className="legend-dot"/> Destination</span><span>Not to scale</span></div></div>
+   <div className="journey-progress-wrap"><div className="journey-progress-label"><span>{started?`STEP ${Math.min(step+1,steps.length)} OF ${steps.length}`:'ROUTE READY TO PREVIEW'}</span><b>{progress}%</b></div><div className="journey-progress"><span style={{width:`${progress}%`}}/></div></div>
+   <div className="journey-controls"><button className="journey-secondary" onClick={()=>{setStarted(false);setStep(0);setAuto(false)}}><RotateCcw size={16}/> Reset</button><button className="journey-secondary" onClick={()=>setVoice(v=>!v)}><Volume2 size={16}/>{voice?'Voice on':'Voice guidance'}</button><button className="journey-primary" disabled={!started||step>=steps.length-1} onClick={()=>{setAuto(false);setStep(s=>Math.min(steps.length-1,s+1))}}>Next instruction <ChevronRight size={17}/></button><button className="journey-play" disabled={!started||step>=steps.length-1} onClick={()=>setAuto(a=>!a)}>{auto?<CirclePause size={18}/>:<CirclePlay size={18}/>} {auto?'Pause':'Auto-play'}</button></div>
+  </section>
+  <aside className="journey-directions"><div className="journey-directions-header"><div><span className="journey-label">TURN-BY-TURN</span><h2>Follow these steps</h2></div><span className="journey-time">{Math.max(1,Math.round((steps.length-1)*0.6))} min <small>demo estimate</small></span></div><div className="journey-current"><div className="journey-current-icon"><ArrowFor turn={steps[step]?.turn}/></div><div><span>{started?'CURRENT INSTRUCTION':'FIRST INSTRUCTION'}</span><h3>{started?(steps[step]?.title||'Start navigation'):'Ready when you are'}</h3><p>{started?(steps[step]?.detail||'Follow the route line'):'Press Preview route, then use Next instruction or Auto-play to simulate movement.'}</p></div></div><div className="journey-step-list">{steps.map((s,i)=><button key={i} className={`journey-step-row ${i===step&&started?'current':''} ${i<step&&started?'completed':''}`} onClick={()=>{setStarted(true);setAuto(false);setStep(i)}}><span className="journey-step-symbol">{i<step&&started?<Check size={15}/>:<ArrowFor turn={s.turn}/>}</span><span className="journey-step-copy"><b>{s.title}</b><small>{s.detail}</small></span>{i===step&&started?<span className="journey-here">NOW</span>:<ChevronRight size={15}/>}</button>)}</div><div className="journey-demo-note"><LocateFixed size={17}/><p><b>Prototype simulation</b><br/>Map geometry, distances, and turns are hypothetical. Auto-play moves the marker between demo checkpoints; it does not track your real position.</p></div></aside></div>
+  <footer className="journey-footer"><span><Accessibility size={17}/> Step-free preference enabled</span><span><MapPin size={16}/> GTBIT campus schematic</span><span><b>Demo data</b> · replace with surveyed map later</span></footer>
+ </main>
+}
